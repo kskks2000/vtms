@@ -1,0 +1,1772 @@
+# PostgreSQL 11.22 / schema=vtms
+# tables: 124
+# names: accessorial_types, air_waybills, alert_rules, api_keys, approval_decisions, approval_requests, approval_steps, approval_workflows, assignment_charges, assignments, audit_logs, audit_logs_2026_06, audit_logs_2026_07, audit_logs_2026_08, audit_logs_default, business_partners, carrier_capabilities, carrier_certifications, carrier_compliance, carrier_contracts, carrier_insurance, carrier_invoice_lines, carrier_invoices, carrier_payments, carrier_scorecards, carriers, claims, consolidation_groups, consolidation_items, currencies, customer_invoice_lines, customer_invoices, customer_payments, customers, customs_declaration_items, customs_declarations, departments, dock_appointments, documents, domain_events, driver_hos_logs, driver_violations, drivers, eta_predictions, exceptions, exchange_rates, external_references, facilities, freight_audits, fuel_price_indices, fuel_surcharge_brackets, geofence_events, geofence_events_default, geofences, gl_codes, integration_endpoints, integration_messages, integration_messages_2026_06, integration_messages_2026_07, integration_messages_2026_08, integration_messages_default, invoice_taxes, kpi_definitions, kpi_measurements, kpi_targets, lanes, load_plan_items, load_plans, locations, login_logs, login_logs_default, mfa_configs, notifications, notifications_default, number_sequences, ocean_bills_of_lading, ocean_containers, order_charges, order_items, order_references, order_stops, order_template_items, order_templates, orders, partner_contacts, password_reset_tokens, permissions, proofs_of_delivery, rate_shopping_quotes, rate_shopping_sessions, report_definitions, report_executions, report_schedules, return_order_items, return_orders, role_permissions, roles, shipment_orders, shipment_stops, shipments, spot_quotes, status_history, tariff_accessorials, tariff_rates, tariffs, tax_codes, tenants, tenders, tracking_events, tracking_events_2026_06, tracking_events_2026_07, tracking_events_2026_08, tracking_events_default, user_roles, user_sessions, users, vehicle_inspections, vehicle_maintenance_logs, vehicle_maintenance_schedules, vehicles, webhook_configs, webhook_deliveries, zone_postal_codes, zones
+
+== accessorial_types  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - code: TEXT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - default_rate: NUMERIC(14, 2)
+   - gl_code_id: BIGINT
+   - deleted_at: TIMESTAMP
+   FK (gl_code_id) -> gl_codes(id)
+   FK (tenant_id) -> tenants(id)
+
+== air_waybills  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".air_waybills_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - shipment_id: BIGINT  [NOT NULL]
+   - awb_no: TEXT  [NOT NULL]
+   - airline_code: TEXT
+   - flight_no: TEXT
+   - origin_airport: CHAR(3)
+   - dest_airport: CHAR(3)
+   - departure_at: TIMESTAMP
+   - arrival_at: TIMESTAMP
+   - actual_departure_at: TIMESTAMP
+   - actual_arrival_at: TIMESTAMP
+   - gross_weight_kg: NUMERIC(10, 3)
+   - chargeable_weight_kg: NUMERIC(10, 3)
+   - pieces: INTEGER
+   - status: TEXT  [NOT NULL, default='BOOKED'::text]
+   - freight_charges: NUMERIC(15, 2)
+   - currency: CHAR(3)
+   - special_handling: ARRAY
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   UNIQUE (tenant_id, awb_no)
+
+== alert_rules  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".alert_rules_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - event_type: TEXT  [NOT NULL]
+   - conditions: JSONB  [NOT NULL, default='{}'::jsonb]
+   - severity: TEXT  [NOT NULL, default='INFO'::text]
+   - channels: ARRAY  [NOT NULL, default='{}'::text[]]
+   - recipients: JSONB  [NOT NULL, default='[]'::jsonb]
+   - cool_down_minutes: INTEGER  [NOT NULL, default=0]
+   - is_active: BOOLEAN  [NOT NULL, default=true]
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+
+== api_keys  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".api_keys_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - key_prefix: TEXT  [NOT NULL]
+   - key_hash: TEXT  [NOT NULL]
+   - scopes: ARRAY  [NOT NULL, default='{}'::text[]]
+   - allowed_ips: ARRAY
+   - rate_limit_per_min: INTEGER  [NOT NULL, default=60]
+   - last_used_at: TIMESTAMP
+   - expires_at: TIMESTAMP
+   - is_active: BOOLEAN  [NOT NULL, default=true]
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - revoked_at: TIMESTAMP
+   - revoked_by: BIGINT
+
+== approval_decisions  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".approval_decisions_id_seq'::regclass)]
+   - request_id: BIGINT  [NOT NULL]
+   - step_no: INTEGER  [NOT NULL]
+   - decided_by: BIGINT  [NOT NULL]
+   - decision: TEXT  [NOT NULL]
+   - note: TEXT
+   - decided_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (request_id) -> approval_requests(id)
+
+== approval_requests  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".approval_requests_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - workflow_id: BIGINT  [NOT NULL]
+   - entity_type: TEXT  [NOT NULL]
+   - entity_id: BIGINT  [NOT NULL]
+   - current_step_no: INTEGER  [NOT NULL, default=1]
+   - status: TEXT  [NOT NULL, default='PENDING'::text]
+   - requested_by: BIGINT
+   - requested_at: TIMESTAMP  [NOT NULL, default=now()]
+   - resolved_at: TIMESTAMP
+   - resolution_note: TEXT
+   FK (workflow_id) -> approval_workflows(id)
+
+== approval_steps  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".approval_steps_id_seq'::regclass)]
+   - workflow_id: BIGINT  [NOT NULL]
+   - step_no: INTEGER  [NOT NULL]
+   - step_name: TEXT  [NOT NULL]
+   - approver_type: TEXT  [NOT NULL]
+   - approver_id: BIGINT
+   - timeout_hours: INTEGER
+   - escalate_to_id: BIGINT
+   - requires_all: BOOLEAN  [NOT NULL, default=false]
+   FK (workflow_id) -> approval_workflows(id)
+   UNIQUE (workflow_id, step_no)
+
+== approval_workflows  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".approval_workflows_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - entity_type: TEXT  [NOT NULL]
+   - trigger_conditions: JSONB  [NOT NULL, default='{}'::jsonb]
+   - is_active: BOOLEAN  [NOT NULL, default=true]
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+
+== assignment_charges  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - assignment_id: BIGINT  [NOT NULL]
+   - charge_type: VARCHAR(11)  [NOT NULL]
+   - accessorial_type_id: BIGINT
+   - description: TEXT
+   - amount: NUMERIC(14, 2)  [NOT NULL]
+   - currency: CHAR(3)  [NOT NULL, default='KRW'::bpchar]
+   FK (accessorial_type_id) -> accessorial_types(id)
+   FK (assignment_id) -> assignments(id)
+   FK (currency) -> currencies(code)
+
+== assignments  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - shipment_id: BIGINT  [NOT NULL]
+   - carrier_id: BIGINT  [NOT NULL]
+   - vehicle_id: BIGINT
+   - driver_id: BIGINT
+   - tender_id: BIGINT
+   - status: VARCHAR(10)  [NOT NULL, default='booked'::assignment_status]
+   - buy_rate: NUMERIC(14, 2)  [NOT NULL]
+   - currency: CHAR(3)  [NOT NULL, default='KRW'::bpchar]
+   - created_by: BIGINT
+   - updated_by: BIGINT
+   - assigned_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (carrier_id) -> carriers(partner_id)
+   FK (created_by) -> users(id)
+   FK (currency) -> currencies(code)
+   FK (driver_id) -> drivers(id)
+   FK (shipment_id) -> shipments(id)
+   FK (tender_id) -> tenders(id)
+   FK (updated_by) -> users(id)
+   FK (vehicle_id) -> vehicles(id)
+
+== audit_logs  (rows=18)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".audit_logs_id_seq'::regclass)]
+   - tenant_id: BIGINT
+   - user_id: BIGINT
+   - entity_type: TEXT  [NOT NULL]
+   - entity_id: BIGINT
+   - action: TEXT  [NOT NULL]
+   - changes: JSONB
+   - ip_address: INET
+   - created_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+
+== audit_logs_2026_06  (rows=18)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".audit_logs_id_seq'::regclass)]
+   - tenant_id: BIGINT
+   - user_id: BIGINT
+   - entity_type: TEXT  [NOT NULL]
+   - entity_id: BIGINT
+   - action: TEXT  [NOT NULL]
+   - changes: JSONB
+   - ip_address: INET
+   - created_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+
+== audit_logs_2026_07  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".audit_logs_id_seq'::regclass)]
+   - tenant_id: BIGINT
+   - user_id: BIGINT
+   - entity_type: TEXT  [NOT NULL]
+   - entity_id: BIGINT
+   - action: TEXT  [NOT NULL]
+   - changes: JSONB
+   - ip_address: INET
+   - created_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+
+== audit_logs_2026_08  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".audit_logs_id_seq'::regclass)]
+   - tenant_id: BIGINT
+   - user_id: BIGINT
+   - entity_type: TEXT  [NOT NULL]
+   - entity_id: BIGINT
+   - action: TEXT  [NOT NULL]
+   - changes: JSONB
+   - ip_address: INET
+   - created_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+
+== audit_logs_default  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".audit_logs_id_seq'::regclass)]
+   - tenant_id: BIGINT
+   - user_id: BIGINT
+   - entity_type: TEXT  [NOT NULL]
+   - entity_id: BIGINT
+   - action: TEXT  [NOT NULL]
+   - changes: JSONB
+   - ip_address: INET
+   - created_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+
+== business_partners  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - public_id: UUID  [NOT NULL, default=gen_random_uuid()]
+   - tenant_id: BIGINT  [NOT NULL]
+   - code: TEXT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - business_no: TEXT
+   - is_active: BOOLEAN  [NOT NULL, default=true]
+   - deleted_at: TIMESTAMP
+   - created_by: BIGINT
+   - updated_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (created_by) -> users(id)
+   FK (tenant_id) -> tenants(id)
+   FK (updated_by) -> users(id)
+   UNIQUE (public_id)
+
+== carrier_capabilities  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - carrier_id: BIGINT  [NOT NULL]
+   - equipment: VARCHAR(12)  [NOT NULL]
+   - zone_id: BIGINT
+   - can_hazmat: BOOLEAN  [NOT NULL, default=false]
+   - can_reefer: BOOLEAN  [NOT NULL, default=false]
+   - max_weight_kg: NUMERIC(12, 3)
+   FK (carrier_id) -> carriers(partner_id)
+   FK (zone_id) -> zones(id)
+
+== carrier_certifications  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".carrier_certifications_id_seq'::regclass)]
+   - carrier_id: BIGINT  [NOT NULL]
+   - cert_type: TEXT  [NOT NULL]
+   - cert_no: TEXT
+   - issuer: TEXT
+   - issued_date: DATE
+   - expires_date: DATE
+   - document_url: TEXT
+   - is_active: BOOLEAN  [NOT NULL, default=true]
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+
+== carrier_compliance  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".carrier_compliance_id_seq'::regclass)]
+   - carrier_id: BIGINT  [NOT NULL]
+   - compliance_type: TEXT  [NOT NULL]
+   - identifier: TEXT
+   - safety_rating: TEXT
+   - rating_date: DATE
+   - authority_type: ARRAY
+   - is_active: BOOLEAN  [NOT NULL, default=true]
+   - verified_at: TIMESTAMP
+   - verified_by: BIGINT
+   - next_review_date: DATE
+   - notes: TEXT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   UNIQUE (carrier_id, compliance_type)
+
+== carrier_contracts  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - carrier_id: BIGINT  [NOT NULL]
+   - contract_no: TEXT  [NOT NULL]
+   - status: VARCHAR(10)  [NOT NULL, default='draft'::contract_status]
+   - valid_from: DATE  [NOT NULL]
+   - valid_to: DATE
+   - sla_terms: JSONB
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   - credit_limit: NUMERIC(15, 2)
+   - payment_terms_days: INTEGER  [NOT NULL, default=30]
+   FK (carrier_id) -> carriers(partner_id)
+   FK (created_by) -> users(id)
+
+== carrier_insurance  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - carrier_id: BIGINT  [NOT NULL]
+   - policy_no: TEXT  [NOT NULL]
+   - insurer: TEXT
+   - coverage_amount: NUMERIC(16, 2)
+   - valid_from: DATE
+   - valid_to: DATE
+   FK (carrier_id) -> carriers(partner_id)
+
+== carrier_invoice_lines  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - invoice_id: BIGINT  [NOT NULL]
+   - assignment_id: BIGINT
+   - charge_type: VARCHAR(11)  [NOT NULL, default='base'::charge_type]
+   - description: TEXT
+   - amount: NUMERIC(14, 2)  [NOT NULL]
+   - gl_code_id: BIGINT
+   FK (assignment_id) -> assignments(id)
+   FK (gl_code_id) -> gl_codes(id)
+   FK (invoice_id) -> carrier_invoices(id)
+
+== carrier_invoices  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - public_id: UUID  [NOT NULL, default=gen_random_uuid()]
+   - tenant_id: BIGINT  [NOT NULL]
+   - carrier_id: BIGINT  [NOT NULL]
+   - invoice_no: TEXT  [NOT NULL]
+   - status: VARCHAR(9)  [NOT NULL, default='issued'::invoice_status]
+   - currency: CHAR(3)  [NOT NULL, default='KRW'::bpchar]
+   - net_amount: NUMERIC(14, 2)  [NOT NULL, default=0]
+   - tax_amount: NUMERIC(14, 2)  [NOT NULL, default=0]
+   - total_amount: NUMERIC(14, 2)
+   - issued_at: DATE
+   - due_at: DATE
+   - created_by: BIGINT
+   - updated_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   - tax_code_id: BIGINT
+   FK (carrier_id) -> carriers(partner_id)
+   FK (created_by) -> users(id)
+   FK (currency) -> currencies(code)
+   FK (tenant_id) -> tenants(id)
+   FK (updated_by) -> users(id)
+   UNIQUE (public_id)
+   UNIQUE (tenant_id, carrier_id, invoice_no)
+
+== carrier_payments  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - invoice_id: BIGINT  [NOT NULL]
+   - amount: NUMERIC(14, 2)  [NOT NULL]
+   - paid_at: DATE  [NOT NULL]
+   - method: TEXT
+   - reference_no: TEXT
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (created_by) -> users(id)
+   FK (invoice_id) -> carrier_invoices(id)
+
+== carrier_scorecards  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - carrier_id: BIGINT  [NOT NULL]
+   - period_month: DATE  [NOT NULL]
+   - on_time_rate: NUMERIC(5, 2)
+   - acceptance_rate: NUMERIC(5, 2)
+   - claim_rate: NUMERIC(5, 2)
+   - overall_score: NUMERIC(5, 2)
+   FK (carrier_id) -> carriers(partner_id)
+   UNIQUE (carrier_id, period_month)
+
+== carriers  (rows=0)
+   - partner_id: BIGINT  [PK, NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - settlement_currency: CHAR(3)  [NOT NULL, default='KRW'::bpchar]
+   - payment_terms_days: INTEGER  [NOT NULL, default=30]
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (partner_id) -> business_partners(id)
+   FK (settlement_currency) -> currencies(code)
+   FK (tenant_id) -> tenants(id)
+
+== claims  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - claim_no: TEXT  [NOT NULL]
+   - shipment_id: BIGINT
+   - order_id: BIGINT
+   - customer_id: BIGINT
+   - carrier_id: BIGINT
+   - exception_id: BIGINT
+   - status: VARCHAR(12)  [NOT NULL, default='submitted'::claim_status]
+   - claim_type: VARCHAR(17)  [NOT NULL]
+   - amount_claimed: NUMERIC(16, 2)
+   - amount_approved: NUMERIC(16, 2)
+   - currency: CHAR(3)  [NOT NULL, default='KRW'::bpchar]
+   - filed_at: DATE  [NOT NULL, default=CURRENT_DATE]
+   - closed_at: DATE
+   - notes: TEXT
+   - created_by: BIGINT
+   - updated_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (carrier_id) -> carriers(partner_id)
+   FK (created_by) -> users(id)
+   FK (currency) -> currencies(code)
+   FK (customer_id) -> customers(partner_id)
+   FK (exception_id) -> exceptions(id)
+   FK (order_id) -> orders(id)
+   FK (shipment_id) -> shipments(id)
+   FK (tenant_id) -> tenants(id)
+   FK (updated_by) -> users(id)
+   UNIQUE (tenant_id, claim_no)
+
+== consolidation_groups  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".consolidation_groups_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - group_no: TEXT  [NOT NULL]
+   - consolidation_type: TEXT  [NOT NULL]
+   - origin_zone_id: BIGINT
+   - dest_zone_id: BIGINT
+   - status: TEXT  [NOT NULL, default='OPEN'::text]
+   - cut_off_time: TIMESTAMP
+   - actual_departure_at: TIMESTAMP
+   - total_shipments: INTEGER  [NOT NULL, default=0]
+   - total_weight_kg: NUMERIC(12, 3)
+   - total_volume_cbm: NUMERIC(12, 3)
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   UNIQUE (tenant_id, group_no)
+
+== consolidation_items  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".consolidation_items_id_seq'::regclass)]
+   - consolidation_group_id: BIGINT  [NOT NULL]
+   - shipment_id: BIGINT  [NOT NULL]
+   - added_by: BIGINT
+   - added_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (consolidation_group_id) -> consolidation_groups(id)
+   UNIQUE (consolidation_group_id, shipment_id)
+
+== currencies  (rows=5)
+   - code: CHAR(3)  [PK, NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - minor_unit: SMALLINT  [NOT NULL, default=2]
+
+== customer_invoice_lines  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - invoice_id: BIGINT  [NOT NULL]
+   - order_id: BIGINT
+   - charge_type: VARCHAR(11)  [NOT NULL, default='base'::charge_type]
+   - description: TEXT
+   - amount: NUMERIC(14, 2)  [NOT NULL]
+   - gl_code_id: BIGINT
+   FK (gl_code_id) -> gl_codes(id)
+   FK (invoice_id) -> customer_invoices(id)
+   FK (order_id) -> orders(id)
+
+== customer_invoices  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - public_id: UUID  [NOT NULL, default=gen_random_uuid()]
+   - tenant_id: BIGINT  [NOT NULL]
+   - customer_id: BIGINT  [NOT NULL]
+   - invoice_no: TEXT  [NOT NULL]
+   - status: VARCHAR(9)  [NOT NULL, default='draft'::invoice_status]
+   - currency: CHAR(3)  [NOT NULL, default='KRW'::bpchar]
+   - net_amount: NUMERIC(14, 2)  [NOT NULL, default=0]
+   - tax_amount: NUMERIC(14, 2)  [NOT NULL, default=0]
+   - total_amount: NUMERIC(14, 2)
+   - issued_at: DATE
+   - due_at: DATE
+   - created_by: BIGINT
+   - updated_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   - tax_code_id: BIGINT
+   FK (created_by) -> users(id)
+   FK (currency) -> currencies(code)
+   FK (customer_id) -> customers(partner_id)
+   FK (tenant_id) -> tenants(id)
+   FK (updated_by) -> users(id)
+   UNIQUE (public_id)
+   UNIQUE (tenant_id, invoice_no)
+
+== customer_payments  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - invoice_id: BIGINT  [NOT NULL]
+   - amount: NUMERIC(14, 2)  [NOT NULL]
+   - paid_at: DATE  [NOT NULL]
+   - method: TEXT
+   - reference_no: TEXT
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (created_by) -> users(id)
+   FK (invoice_id) -> customer_invoices(id)
+
+== customers  (rows=0)
+   - partner_id: BIGINT  [PK, NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - billing_currency: CHAR(3)  [NOT NULL, default='KRW'::bpchar]
+   - payment_terms_days: INTEGER  [NOT NULL, default=30]
+   - credit_limit: NUMERIC(16, 2)
+   - sla_terms: JSONB
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (billing_currency) -> currencies(code)
+   FK (partner_id) -> business_partners(id)
+   FK (tenant_id) -> tenants(id)
+
+== customs_declaration_items  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".customs_declaration_items_id_seq'::regclass)]
+   - declaration_id: BIGINT  [NOT NULL]
+   - order_item_id: BIGINT
+   - hs_code: TEXT  [NOT NULL]
+   - description: TEXT  [NOT NULL]
+   - country_of_origin: CHAR(2)
+   - quantity: NUMERIC(12, 3)  [NOT NULL]
+   - unit_of_measure: TEXT
+   - unit_value: NUMERIC(15, 4)
+   - total_value: NUMERIC(15, 2)
+   - currency: CHAR(3)
+   - net_weight_kg: NUMERIC(10, 3)
+   - is_controlled: BOOLEAN  [NOT NULL, default=false]
+   - license_no: TEXT
+   FK (declaration_id) -> customs_declarations(id)
+
+== customs_declarations  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".customs_declarations_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - shipment_id: BIGINT  [NOT NULL]
+   - declaration_no: TEXT
+   - declaration_type: TEXT  [NOT NULL]
+   - country_of_export: CHAR(2)
+   - country_of_import: CHAR(2)
+   - incoterms: TEXT
+   - total_declared_value: NUMERIC(15, 2)
+   - currency: CHAR(3)
+   - gross_weight_kg: NUMERIC(10, 3)
+   - package_count: INTEGER
+   - status: TEXT  [NOT NULL, default='DRAFT'::text]
+   - submitted_at: TIMESTAMP
+   - cleared_at: TIMESTAMP
+   - broker_id: BIGINT
+   - broker_ref: TEXT
+   - notes: TEXT
+   - documents: JSONB  [NOT NULL, default='[]'::jsonb]
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+
+== departments  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - code: TEXT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - parent_id: BIGINT
+   - deleted_at: TIMESTAMP
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (parent_id) -> departments(id)
+   FK (tenant_id) -> tenants(id)
+
+== dock_appointments  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".dock_appointments_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - facility_id: BIGINT  [NOT NULL]
+   - shipment_id: BIGINT
+   - dock_number: INTEGER
+   - appointment_type: TEXT  [NOT NULL]
+   - scheduled_from: TIMESTAMP  [NOT NULL]
+   - scheduled_to: TIMESTAMP  [NOT NULL]
+   - actual_arrived_at: TIMESTAMP
+   - actual_departed_at: TIMESTAMP
+   - status: TEXT  [NOT NULL, default='SCHEDULED'::text]
+   - carrier_id: BIGINT
+   - vehicle_id: BIGINT
+   - driver_id: BIGINT
+   - reference_no: TEXT
+   - notes: TEXT
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (facility_id) -> facilities(id)
+
+== documents  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - doc_type: VARCHAR(9)  [NOT NULL]
+   - entity_type: TEXT  [NOT NULL]
+   - entity_id: BIGINT  [NOT NULL]
+   - file_name: TEXT  [NOT NULL]
+   - mime_type: TEXT
+   - file_size_bytes: BIGINT
+   - checksum_sha256: TEXT
+   - storage_url: TEXT  [NOT NULL]
+   - uploaded_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (tenant_id) -> tenants(id)
+   FK (uploaded_by) -> users(id)
+
+== domain_events  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - aggregate_type: TEXT  [NOT NULL]
+   - aggregate_id: BIGINT  [NOT NULL]
+   - event_type: TEXT  [NOT NULL]
+   - payload: JSONB  [NOT NULL]
+   - occurred_at: TIMESTAMP  [NOT NULL, default=now()]
+   - published_at: TIMESTAMP
+
+== driver_hos_logs  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".driver_hos_logs_id_seq'::regclass)]
+   - driver_id: BIGINT  [NOT NULL]
+   - log_date: DATE  [NOT NULL]
+   - driving_minutes: INTEGER  [NOT NULL, default=0]
+   - on_duty_minutes: INTEGER  [NOT NULL, default=0]
+   - off_duty_minutes: INTEGER  [NOT NULL, default=0]
+   - sleeper_minutes: INTEGER  [NOT NULL, default=0]
+   - violations_count: INTEGER  [NOT NULL, default=0]
+   - cycle_used_minutes: INTEGER  [NOT NULL, default=0]
+   - source: TEXT  [NOT NULL, default='MANUAL'::text]
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   UNIQUE (driver_id, log_date)
+
+== driver_violations  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".driver_violations_id_seq'::regclass)]
+   - driver_id: BIGINT  [NOT NULL]
+   - hos_log_id: BIGINT
+   - violation_type: TEXT  [NOT NULL]
+   - occurred_at: TIMESTAMP  [NOT NULL]
+   - severity: TEXT  [NOT NULL]
+   - description: TEXT
+   - resolved_at: TIMESTAMP
+   - resolved_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (hos_log_id) -> driver_hos_logs(id)
+
+== drivers  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - carrier_id: BIGINT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - phone: TEXT
+   - license_no: TEXT
+   - license_type: TEXT
+   - license_expires_on: DATE
+   - hazmat_certified: BOOLEAN  [NOT NULL, default=false]
+   - is_active: BOOLEAN  [NOT NULL, default=true]
+   - deleted_at: TIMESTAMP
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   - hos_cycle: TEXT
+   - hos_reset_at: TIMESTAMP
+   - available_hours: NUMERIC(5, 2)
+   FK (carrier_id) -> carriers(partner_id)
+
+== eta_predictions  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - shipment_id: BIGINT  [NOT NULL]
+   - stop_id: BIGINT
+   - predicted_eta: TIMESTAMP  [NOT NULL]
+   - confidence: NUMERIC(4, 3)
+   - source: VARCHAR(14)  [NOT NULL, default='gps_projection'::eta_source]
+   - predicted_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (shipment_id) -> shipments(id)
+   FK (stop_id) -> shipment_stops(id)
+
+== exceptions  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - shipment_id: BIGINT
+   - order_id: BIGINT
+   - exc_type: VARCHAR(17)  [NOT NULL]
+   - severity: VARCHAR(8)  [NOT NULL, default='medium'::exception_severity]
+   - status: VARCHAR(11)  [NOT NULL, default='open'::exception_status]
+   - description: TEXT
+   - resolved_by: BIGINT
+   - resolved_at: TIMESTAMP
+   - resolution_note: TEXT
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (created_by) -> users(id)
+   FK (order_id) -> orders(id)
+   FK (resolved_by) -> users(id)
+   FK (shipment_id) -> shipments(id)
+   FK (tenant_id) -> tenants(id)
+
+== exchange_rates  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - base_currency: CHAR(3)  [NOT NULL]
+   - quote_currency: CHAR(3)  [NOT NULL]
+   - rate: NUMERIC(18, 8)  [NOT NULL]
+   - effective_date: DATE  [NOT NULL]
+   FK (base_currency) -> currencies(code)
+   FK (quote_currency) -> currencies(code)
+   UNIQUE (base_currency, quote_currency, effective_date)
+
+== external_references  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - system_code: TEXT  [NOT NULL]
+   - entity_type: TEXT  [NOT NULL]
+   - entity_id: BIGINT  [NOT NULL]
+   - external_id: TEXT  [NOT NULL]
+   FK (tenant_id) -> tenants(id)
+   UNIQUE (tenant_id, system_code, entity_type, external_id)
+
+== facilities  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".facilities_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - code: TEXT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+
+== freight_audits  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - invoice_id: BIGINT  [NOT NULL]
+   - expected_amount: NUMERIC(14, 2)  [NOT NULL]
+   - billed_amount: NUMERIC(14, 2)  [NOT NULL]
+   - variance: NUMERIC(14, 2)
+   - tolerance_pct: NUMERIC(5, 2)  [NOT NULL, default=2.0]
+   - result: VARCHAR(13)  [NOT NULL, default='manual_review'::audit_result]
+   - reviewed_by: BIGINT
+   - audited_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (invoice_id) -> carrier_invoices(id)
+   FK (reviewed_by) -> users(id)
+
+== fuel_price_indices  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - index_date: DATE  [NOT NULL]
+   - price_per_liter: NUMERIC(10, 2)  [NOT NULL]
+   - source: TEXT
+   FK (tenant_id) -> tenants(id)
+   UNIQUE (tenant_id, index_date)
+
+== fuel_surcharge_brackets  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - price_from: NUMERIC(10, 2)  [NOT NULL]
+   - price_to: NUMERIC(10, 2)
+   - surcharge_pct: NUMERIC(6, 3)  [NOT NULL]
+   FK (tenant_id) -> tenants(id)
+
+== geofence_events  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".geofence_events_id_seq'::regclass)]
+   - geofence_id: BIGINT  [NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - shipment_id: BIGINT
+   - vehicle_id: BIGINT
+   - driver_id: BIGINT
+   - event_type: TEXT  [NOT NULL]
+   - latitude: NUMERIC(10, 7)
+   - longitude: NUMERIC(10, 7)
+   - speed_kmh: NUMERIC(6, 2)
+   - dwell_minutes: INTEGER
+   - occurred_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+
+== geofence_events_default  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".geofence_events_id_seq'::regclass)]
+   - geofence_id: BIGINT  [NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - shipment_id: BIGINT
+   - vehicle_id: BIGINT
+   - driver_id: BIGINT
+   - event_type: TEXT  [NOT NULL]
+   - latitude: NUMERIC(10, 7)
+   - longitude: NUMERIC(10, 7)
+   - speed_kmh: NUMERIC(6, 2)
+   - dwell_minutes: INTEGER
+   - occurred_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+
+== geofences  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".geofences_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - geofence_type: TEXT  [NOT NULL]
+   - center_latitude: NUMERIC(10, 7)
+   - center_longitude: NUMERIC(10, 7)
+   - radius_meters: INTEGER
+   - boundary: JSONB
+   - linked_entity_type: TEXT
+   - linked_entity_id: BIGINT
+   - trigger_on_enter: BOOLEAN  [NOT NULL, default=true]
+   - trigger_on_exit: BOOLEAN  [NOT NULL, default=true]
+   - dwell_minutes_threshold: INTEGER
+   - alert_rule_id: BIGINT
+   - is_active: BOOLEAN  [NOT NULL, default=true]
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (alert_rule_id) -> alert_rules(id)
+
+== gl_codes  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - code: TEXT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - deleted_at: TIMESTAMP
+   FK (tenant_id) -> tenants(id)
+
+== integration_endpoints  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - system_code: TEXT  [NOT NULL]
+   - protocol: VARCHAR(8)  [NOT NULL]
+   - config: JSONB  [NOT NULL, default='{}'::jsonb]
+   - credentials_ref: TEXT
+   - is_active: BOOLEAN  [NOT NULL, default=true]
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (tenant_id) -> tenants(id)
+   UNIQUE (tenant_id, system_code, protocol)
+
+== integration_messages  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".integration_messages_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - endpoint_id: BIGINT
+   - direction: VARCHAR(8)  [NOT NULL]
+   - message_type: TEXT  [NOT NULL]
+   - correlation_id: TEXT
+   - status: VARCHAR(10)  [NOT NULL, default='received'::integration_status]
+   - payload: JSONB
+   - error: TEXT
+   - retry_count: INTEGER  [NOT NULL, default=0]
+   - received_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+   - processed_at: TIMESTAMP
+
+== integration_messages_2026_06  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".integration_messages_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - endpoint_id: BIGINT
+   - direction: VARCHAR(8)  [NOT NULL]
+   - message_type: TEXT  [NOT NULL]
+   - correlation_id: TEXT
+   - status: VARCHAR(10)  [NOT NULL, default='received'::integration_status]
+   - payload: JSONB
+   - error: TEXT
+   - retry_count: INTEGER  [NOT NULL, default=0]
+   - received_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+   - processed_at: TIMESTAMP
+
+== integration_messages_2026_07  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".integration_messages_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - endpoint_id: BIGINT
+   - direction: VARCHAR(8)  [NOT NULL]
+   - message_type: TEXT  [NOT NULL]
+   - correlation_id: TEXT
+   - status: VARCHAR(10)  [NOT NULL, default='received'::integration_status]
+   - payload: JSONB
+   - error: TEXT
+   - retry_count: INTEGER  [NOT NULL, default=0]
+   - received_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+   - processed_at: TIMESTAMP
+
+== integration_messages_2026_08  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".integration_messages_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - endpoint_id: BIGINT
+   - direction: VARCHAR(8)  [NOT NULL]
+   - message_type: TEXT  [NOT NULL]
+   - correlation_id: TEXT
+   - status: VARCHAR(10)  [NOT NULL, default='received'::integration_status]
+   - payload: JSONB
+   - error: TEXT
+   - retry_count: INTEGER  [NOT NULL, default=0]
+   - received_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+   - processed_at: TIMESTAMP
+
+== integration_messages_default  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".integration_messages_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - endpoint_id: BIGINT
+   - direction: VARCHAR(8)  [NOT NULL]
+   - message_type: TEXT  [NOT NULL]
+   - correlation_id: TEXT
+   - status: VARCHAR(10)  [NOT NULL, default='received'::integration_status]
+   - payload: JSONB
+   - error: TEXT
+   - retry_count: INTEGER  [NOT NULL, default=0]
+   - received_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+   - processed_at: TIMESTAMP
+
+== invoice_taxes  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".invoice_taxes_id_seq'::regclass)]
+   - invoice_type: TEXT  [NOT NULL]
+   - invoice_id: BIGINT  [NOT NULL]
+   - tax_code_id: BIGINT  [NOT NULL]
+   - taxable_amount: NUMERIC(15, 2)  [NOT NULL]
+   - tax_rate: NUMERIC(7, 4)  [NOT NULL]
+   - tax_amount: NUMERIC(15, 2)  [NOT NULL]
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (tax_code_id) -> tax_codes(id)
+
+== kpi_definitions  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".kpi_definitions_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - code: TEXT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - category: TEXT  [NOT NULL]
+   - unit: TEXT  [NOT NULL]
+   - aggregation: TEXT  [NOT NULL, default='AVG'::text]
+   - higher_is_better: BOOLEAN  [NOT NULL, default=true]
+   - description: TEXT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   UNIQUE (tenant_id, code)
+
+== kpi_measurements  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".kpi_measurements_id_seq'::regclass)]
+   - kpi_id: BIGINT  [NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - entity_type: TEXT
+   - entity_id: BIGINT
+   - period_type: TEXT  [NOT NULL]
+   - period_year: INTEGER  [NOT NULL]
+   - period_no: INTEGER  [NOT NULL]
+   - measured_value: NUMERIC(15, 4)  [NOT NULL]
+   - measured_at: TIMESTAMP  [NOT NULL, default=now()]
+   - data_source: TEXT
+   FK (kpi_id) -> kpi_definitions(id)
+
+== kpi_targets  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".kpi_targets_id_seq'::regclass)]
+   - kpi_id: BIGINT  [NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - entity_type: TEXT
+   - entity_id: BIGINT
+   - period_type: TEXT  [NOT NULL]
+   - period_year: INTEGER  [NOT NULL]
+   - period_no: INTEGER  [NOT NULL]
+   - target_value: NUMERIC(15, 4)  [NOT NULL]
+   - warning_threshold: NUMERIC(15, 4)
+   - critical_threshold: NUMERIC(15, 4)
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (kpi_id) -> kpi_definitions(id)
+
+== lanes  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - origin_zone_id: BIGINT  [NOT NULL]
+   - dest_zone_id: BIGINT  [NOT NULL]
+   - distance_km: NUMERIC(10, 2)
+   - transit_hours: NUMERIC(6, 1)
+   FK (dest_zone_id) -> zones(id)
+   FK (origin_zone_id) -> zones(id)
+   FK (tenant_id) -> tenants(id)
+   UNIQUE (tenant_id, origin_zone_id, dest_zone_id)
+
+== load_plan_items  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".load_plan_items_id_seq'::regclass)]
+   - load_plan_id: BIGINT  [NOT NULL]
+   - shipment_id: BIGINT
+   - order_id: BIGINT
+   - sequence_no: INTEGER
+   - weight_kg: NUMERIC(10, 3)
+   - volume_cbm: NUMERIC(10, 3)
+   - added_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (load_plan_id) -> load_plans(id)
+
+== load_plans  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".load_plans_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - plan_no: TEXT  [NOT NULL]
+   - status: TEXT  [NOT NULL, default='DRAFT'::text]
+   - equipment_type: TEXT
+   - vehicle_id: BIGINT
+   - driver_id: BIGINT
+   - origin_location_id: BIGINT
+   - dest_location_id: BIGINT
+   - planned_departure_at: TIMESTAMP
+   - planned_arrival_at: TIMESTAMP
+   - total_weight_kg: NUMERIC(10, 3)
+   - total_volume_cbm: NUMERIC(10, 3)
+   - max_weight_kg: NUMERIC(10, 3)
+   - max_volume_cbm: NUMERIC(10, 3)
+   - utilization_pct: NUMERIC(5, 2)
+   - optimization_score: NUMERIC(5, 2)
+   - optimization_params: JSONB  [NOT NULL, default='{}'::jsonb]
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   UNIQUE (tenant_id, plan_no)
+
+== locations  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - customer_id: BIGINT
+   - loc_type: VARCHAR(19)  [NOT NULL, default='other'::location_type]
+   - name: TEXT  [NOT NULL]
+   - country: CHAR(2)  [NOT NULL, default='KR'::bpchar]
+   - postal_code: TEXT
+   - address: TEXT  [NOT NULL]
+   - latitude: NUMERIC(9, 6)
+   - longitude: NUMERIC(9, 6)
+   - contact_phone: TEXT
+   - operating_hours: JSONB
+   - dock_info: JSONB
+   - geofence_radius_m: INTEGER
+   - deleted_at: TIMESTAMP
+   - created_by: BIGINT
+   - updated_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (created_by) -> users(id)
+   FK (customer_id) -> customers(partner_id)
+   FK (tenant_id) -> tenants(id)
+   FK (updated_by) -> users(id)
+
+== login_logs  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".login_logs_id_seq'::regclass)]
+   - tenant_id: BIGINT
+   - user_id: BIGINT
+   - email: TEXT
+   - ip_address: INET
+   - user_agent: TEXT
+   - event_type: TEXT  [NOT NULL]
+   - metadata: JSONB
+   - created_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+
+== login_logs_default  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".login_logs_id_seq'::regclass)]
+   - tenant_id: BIGINT
+   - user_id: BIGINT
+   - email: TEXT
+   - ip_address: INET
+   - user_agent: TEXT
+   - event_type: TEXT  [NOT NULL]
+   - metadata: JSONB
+   - created_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+
+== mfa_configs  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".mfa_configs_id_seq'::regclass)]
+   - user_id: BIGINT  [NOT NULL]
+   - method: TEXT  [NOT NULL]
+   - secret_encrypted: TEXT
+   - phone: TEXT
+   - is_verified: BOOLEAN  [NOT NULL, default=false]
+   - backup_codes_hash: ARRAY
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - verified_at: TIMESTAMP
+   UNIQUE (user_id)
+
+== notifications  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".notifications_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - alert_rule_id: BIGINT
+   - user_id: BIGINT
+   - channel: TEXT  [NOT NULL]
+   - title: TEXT  [NOT NULL]
+   - body: TEXT  [NOT NULL]
+   - entity_type: TEXT
+   - entity_id: BIGINT
+   - metadata: JSONB
+   - status: TEXT  [NOT NULL, default='PENDING'::text]
+   - sent_at: TIMESTAMP
+   - read_at: TIMESTAMP
+   - created_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+
+== notifications_default  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".notifications_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - alert_rule_id: BIGINT
+   - user_id: BIGINT
+   - channel: TEXT  [NOT NULL]
+   - title: TEXT  [NOT NULL]
+   - body: TEXT  [NOT NULL]
+   - entity_type: TEXT
+   - entity_id: BIGINT
+   - metadata: JSONB
+   - status: TEXT  [NOT NULL, default='PENDING'::text]
+   - sent_at: TIMESTAMP
+   - read_at: TIMESTAMP
+   - created_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+
+== number_sequences  (rows=0)
+   - tenant_id: BIGINT  [PK, NOT NULL]
+   - seq_type: TEXT  [PK, NOT NULL]
+   - prefix: TEXT  [NOT NULL]
+   - last_value: BIGINT  [NOT NULL, default=0]
+   FK (tenant_id) -> tenants(id)
+
+== ocean_bills_of_lading  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".ocean_bills_of_lading_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - shipment_id: BIGINT  [NOT NULL]
+   - bol_no: TEXT  [NOT NULL]
+   - carrier_scac: TEXT
+   - vessel_name: TEXT
+   - voyage_no: TEXT
+   - origin_port: CHAR(5)
+   - dest_port: CHAR(5)
+   - pol_etd: TIMESTAMP
+   - pod_eta: TIMESTAMP
+   - pol_atd: TIMESTAMP
+   - pod_ata: TIMESTAMP
+   - container_count: INTEGER
+   - teu_count: NUMERIC(6, 1)
+   - gross_weight_kg: NUMERIC(12, 3)
+   - service_type: TEXT
+   - status: TEXT  [NOT NULL, default='BOOKED'::text]
+   - freight_charges: NUMERIC(15, 2)
+   - currency: CHAR(3)
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   UNIQUE (tenant_id, bol_no)
+
+== ocean_containers  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".ocean_containers_id_seq'::regclass)]
+   - bol_id: BIGINT  [NOT NULL]
+   - container_no: TEXT  [NOT NULL]
+   - container_type: TEXT  [NOT NULL]
+   - seal_no: TEXT
+   - tare_weight_kg: NUMERIC(8, 3)
+   - cargo_weight_kg: NUMERIC(10, 3)
+   - is_oog: BOOLEAN  [NOT NULL, default=false]
+   - is_hazmat: BOOLEAN  [NOT NULL, default=false]
+   - imdg_class: TEXT
+   - un_no: TEXT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (bol_id) -> ocean_bills_of_lading(id)
+
+== order_charges  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - order_id: BIGINT  [NOT NULL]
+   - charge_type: VARCHAR(11)  [NOT NULL]
+   - accessorial_type_id: BIGINT
+   - description: TEXT
+   - amount: NUMERIC(14, 2)  [NOT NULL]
+   - currency: CHAR(3)  [NOT NULL, default='KRW'::bpchar]
+   - gl_code_id: BIGINT
+   FK (accessorial_type_id) -> accessorial_types(id)
+   FK (currency) -> currencies(code)
+   FK (gl_code_id) -> gl_codes(id)
+   FK (order_id) -> orders(id)
+
+== order_items  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - order_id: BIGINT  [NOT NULL]
+   - sku: TEXT
+   - description: TEXT
+   - quantity: NUMERIC(12, 3)  [NOT NULL, default=1]
+   - package_type: TEXT
+   - weight_kg: NUMERIC(12, 3)
+   - volume_cbm: NUMERIC(12, 3)
+   - is_hazmat: BOOLEAN  [NOT NULL, default=false]
+   - un_number: TEXT
+   - hs_code: TEXT
+   - country_of_origin: CHAR(2)
+   - customs_value: NUMERIC(15, 2)
+   - customs_currency: CHAR(3)
+   FK (order_id) -> orders(id)
+
+== order_references  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - order_id: BIGINT  [NOT NULL]
+   - ref_type: TEXT  [NOT NULL]
+   - ref_value: TEXT  [NOT NULL]
+   FK (order_id) -> orders(id)
+
+== order_stops  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - order_id: BIGINT  [NOT NULL]
+   - seq: INTEGER  [NOT NULL]
+   - stop_type: VARCHAR(10)  [NOT NULL]
+   - location_id: BIGINT
+   - address: TEXT
+   - window_from: TIMESTAMP
+   - window_to: TIMESTAMP
+   FK (location_id) -> locations(id)
+   FK (order_id) -> orders(id)
+   UNIQUE (order_id, seq)
+
+== order_template_items  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".order_template_items_id_seq'::regclass)]
+   - template_id: BIGINT  [NOT NULL]
+   - sku: TEXT
+   - description: TEXT
+   - quantity: NUMERIC(12, 3)
+   - package_type: TEXT
+   - weight_kg: NUMERIC(10, 3)
+   - volume_cbm: NUMERIC(10, 3)
+   - hs_code: TEXT
+   - is_hazmat: BOOLEAN  [NOT NULL, default=false]
+   - sort_order: INTEGER  [NOT NULL, default=0]
+   FK (template_id) -> order_templates(id)
+
+== order_templates  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".order_templates_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - customer_id: BIGINT
+   - origin_location_id: BIGINT
+   - dest_location_id: BIGINT
+   - service_type: TEXT
+   - equipment_type: TEXT
+   - recurrence_type: TEXT
+   - recurrence_config: JSONB
+   - is_active: BOOLEAN  [NOT NULL, default=true]
+   - template_data: JSONB  [NOT NULL, default='{}'::jsonb]
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+
+== orders  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - public_id: UUID  [NOT NULL, default=gen_random_uuid()]
+   - tenant_id: BIGINT  [NOT NULL]
+   - customer_id: BIGINT  [NOT NULL]
+   - order_no: TEXT  [NOT NULL]
+   - status: VARCHAR(10)  [NOT NULL, default='draft'::order_status]
+   - service: VARCHAR(8)  [NOT NULL, default='standard'::service_level]
+   - requested_equipment: VARCHAR(12)
+   - requested_pickup_at: TIMESTAMP
+   - requested_delivery_at: TIMESTAMP
+   - temperature_min_c: NUMERIC(5, 2)
+   - temperature_max_c: NUMERIC(5, 2)
+   - declared_value: NUMERIC(16, 2)
+   - total_weight_kg: NUMERIC(12, 3)
+   - total_volume_cbm: NUMERIC(12, 3)
+   - currency: CHAR(3)  [NOT NULL, default='KRW'::bpchar]
+   - sell_amount: NUMERIC(14, 2)
+   - cancel_reason: TEXT
+   - notes: TEXT
+   - created_by: BIGINT
+   - updated_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (created_by) -> users(id)
+   FK (currency) -> currencies(code)
+   FK (customer_id) -> customers(partner_id)
+   FK (tenant_id) -> tenants(id)
+   FK (updated_by) -> users(id)
+   UNIQUE (public_id)
+   UNIQUE (tenant_id, order_no)
+
+== partner_contacts  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - partner_id: BIGINT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - role: TEXT
+   - email: TEXT
+   - phone: TEXT
+   - is_primary: BOOLEAN  [NOT NULL, default=false]
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (partner_id) -> business_partners(id)
+
+== password_reset_tokens  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".password_reset_tokens_id_seq'::regclass)]
+   - user_id: BIGINT  [NOT NULL]
+   - token_hash: TEXT  [NOT NULL]
+   - expires_at: TIMESTAMP  [NOT NULL]
+   - used_at: TIMESTAMP
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   UNIQUE (token_hash)
+
+== permissions  (rows=10)
+   - id: BIGINT  [PK, NOT NULL]
+   - code: TEXT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   UNIQUE (code)
+
+== proofs_of_delivery  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - shipment_id: BIGINT  [NOT NULL]
+   - stop_id: BIGINT
+   - received_by: TEXT
+   - signed_at: TIMESTAMP
+   - document_id: BIGINT
+   - notes: TEXT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (document_id) -> documents(id)
+   FK (shipment_id) -> shipments(id)
+   FK (stop_id) -> shipment_stops(id)
+
+== rate_shopping_quotes  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".rate_shopping_quotes_id_seq'::regclass)]
+   - session_id: BIGINT  [NOT NULL]
+   - carrier_id: BIGINT  [NOT NULL]
+   - source: TEXT  [NOT NULL]
+   - rate_amount: NUMERIC(15, 2)  [NOT NULL]
+   - currency: CHAR(3)  [NOT NULL, default='KRW'::bpchar]
+   - transit_days: INTEGER
+   - service_type: TEXT
+   - surcharges: JSONB  [NOT NULL, default='[]'::jsonb]
+   - total_amount: NUMERIC(15, 2)
+   - valid_until: TIMESTAMP
+   - is_selected: BOOLEAN  [NOT NULL, default=false]
+   - rank: INTEGER
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (session_id) -> rate_shopping_sessions(id)
+
+== rate_shopping_sessions  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".rate_shopping_sessions_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - session_ref: TEXT  [NOT NULL]
+   - shipment_id: BIGINT
+   - origin_location_id: BIGINT
+   - dest_location_id: BIGINT
+   - equipment_type: TEXT
+   - weight_kg: NUMERIC(10, 3)
+   - volume_cbm: NUMERIC(10, 3)
+   - pickup_date: DATE
+   - delivery_date: DATE
+   - service_level: TEXT
+   - status: TEXT  [NOT NULL, default='PENDING'::text]
+   - best_quote_id: BIGINT
+   - queried_at: TIMESTAMP  [NOT NULL, default=now()]
+   - expires_at: TIMESTAMP
+   - created_by: BIGINT
+   FK (best_quote_id) -> rate_shopping_quotes(id)
+
+== report_definitions  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".report_definitions_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - description: TEXT
+   - category: TEXT  [NOT NULL]
+   - query_template: TEXT  [NOT NULL]
+   - parameters: JSONB  [NOT NULL, default='[]'::jsonb]
+   - output_format: TEXT  [NOT NULL, default='XLSX'::text]
+   - is_system: BOOLEAN  [NOT NULL, default=false]
+   - is_public: BOOLEAN  [NOT NULL, default=false]
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+
+== report_executions  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".report_executions_id_seq'::regclass)]
+   - schedule_id: BIGINT
+   - report_id: BIGINT  [NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - triggered_by: BIGINT
+   - status: TEXT  [NOT NULL, default='RUNNING'::text]
+   - parameters: JSONB  [NOT NULL, default='{}'::jsonb]
+   - row_count: INTEGER
+   - file_url: TEXT
+   - file_size_bytes: BIGINT
+   - error_message: TEXT
+   - started_at: TIMESTAMP  [NOT NULL, default=now()]
+   - completed_at: TIMESTAMP
+   FK (report_id) -> report_definitions(id)
+   FK (schedule_id) -> report_schedules(id)
+
+== report_schedules  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".report_schedules_id_seq'::regclass)]
+   - report_id: BIGINT  [NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - cron_expression: TEXT  [NOT NULL]
+   - timezone: TEXT  [NOT NULL, default='Asia/Seoul'::text]
+   - parameters: JSONB  [NOT NULL, default='{}'::jsonb]
+   - recipients: JSONB  [NOT NULL, default='[]'::jsonb]
+   - is_active: BOOLEAN  [NOT NULL, default=true]
+   - last_run_at: TIMESTAMP
+   - next_run_at: TIMESTAMP
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (report_id) -> report_definitions(id)
+
+== return_order_items  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".return_order_items_id_seq'::regclass)]
+   - return_order_id: BIGINT  [NOT NULL]
+   - original_order_item_id: BIGINT
+   - sku: TEXT
+   - description: TEXT
+   - quantity: NUMERIC(12, 3)  [NOT NULL]
+   - condition_code: TEXT
+   - inspection_notes: TEXT
+   - disposition: TEXT
+   - inspected_at: TIMESTAMP
+   - inspected_by: BIGINT
+   FK (return_order_id) -> return_orders(id)
+
+== return_orders  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".return_orders_id_seq'::regclass)]
+   - public_id: UUID  [NOT NULL, default=uuid_in((md5(((random())::text || (clock_timestamp())::text)))::cstring)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - return_no: TEXT  [NOT NULL]
+   - original_order_id: BIGINT
+   - customer_id: BIGINT
+   - reason_code: TEXT  [NOT NULL]
+   - reason_detail: TEXT
+   - status: TEXT  [NOT NULL, default='REQUESTED'::text]
+   - return_type: TEXT  [NOT NULL, default='PHYSICAL'::text]
+   - pickup_location_id: BIGINT
+   - return_to_location_id: BIGINT
+   - expected_return_date: DATE
+   - actual_received_at: TIMESTAMP
+   - credit_amount: NUMERIC(15, 2)
+   - currency: CHAR(3)
+   - claim_id: BIGINT
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   UNIQUE (tenant_id, return_no)
+
+== role_permissions  (rows=10)
+   - role_id: BIGINT  [PK, NOT NULL]
+   - permission_id: BIGINT  [PK, NOT NULL]
+   FK (permission_id) -> permissions(id)
+   FK (role_id) -> roles(id)
+
+== roles  (rows=5)
+   - id: BIGINT  [PK, NOT NULL]
+   - code: TEXT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - description: TEXT
+   - is_system: BOOLEAN  [NOT NULL, default=false]
+   UNIQUE (code)
+
+== shipment_orders  (rows=0)
+   - shipment_id: BIGINT  [PK, NOT NULL]
+   - order_id: BIGINT  [PK, NOT NULL]
+   FK (order_id) -> orders(id)
+   FK (shipment_id) -> shipments(id)
+
+== shipment_stops  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - shipment_id: BIGINT  [NOT NULL]
+   - seq: INTEGER  [NOT NULL]
+   - stop_type: VARCHAR(10)  [NOT NULL]
+   - location_id: BIGINT
+   - address: TEXT
+   - planned_from: TIMESTAMP
+   - planned_to: TIMESTAMP
+   - appointment_at: TIMESTAMP
+   - arrived_at: TIMESTAMP
+   - departed_at: TIMESTAMP
+   - detention_minutes: INTEGER
+   FK (location_id) -> locations(id)
+   FK (shipment_id) -> shipments(id)
+   UNIQUE (shipment_id, seq)
+
+== shipments  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - public_id: UUID  [NOT NULL, default=gen_random_uuid()]
+   - tenant_id: BIGINT  [NOT NULL]
+   - shipment_no: TEXT  [NOT NULL]
+   - status: VARCHAR(10)  [NOT NULL, default='planned'::shipment_status]
+   - equipment: VARCHAR(12)
+   - planned_pickup_at: TIMESTAMP
+   - planned_delivery_at: TIMESTAMP
+   - total_weight_kg: NUMERIC(12, 3)
+   - total_volume_cbm: NUMERIC(12, 3)
+   - distance_km: NUMERIC(10, 2)
+   - created_by: BIGINT
+   - updated_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   - mode: TEXT  [NOT NULL, default='ROAD'::text]
+   FK (created_by) -> users(id)
+   FK (tenant_id) -> tenants(id)
+   FK (updated_by) -> users(id)
+   UNIQUE (public_id)
+   UNIQUE (tenant_id, shipment_no)
+
+== spot_quotes  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - carrier_id: BIGINT  [NOT NULL]
+   - lane_id: BIGINT
+   - shipment_id: BIGINT
+   - equipment: VARCHAR(12)
+   - amount: NUMERIC(14, 2)  [NOT NULL]
+   - currency: CHAR(3)  [NOT NULL, default='KRW'::bpchar]
+   - valid_until: TIMESTAMP
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (shipment_id) -> shipments(id)
+   FK (carrier_id) -> carriers(partner_id)
+   FK (created_by) -> users(id)
+   FK (currency) -> currencies(code)
+   FK (lane_id) -> lanes(id)
+   FK (tenant_id) -> tenants(id)
+
+== status_history  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - entity_type: TEXT  [NOT NULL]
+   - entity_id: BIGINT  [NOT NULL]
+   - from_status: TEXT
+   - to_status: TEXT  [NOT NULL]
+   - changed_by: BIGINT
+   - changed_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (changed_by) -> users(id)
+
+== tariff_accessorials  (rows=0)
+   - tariff_id: BIGINT  [PK, NOT NULL]
+   - accessorial_type_id: BIGINT  [PK, NOT NULL]
+   - rate: NUMERIC(14, 2)  [NOT NULL]
+   FK (accessorial_type_id) -> accessorial_types(id)
+   FK (tariff_id) -> tariffs(id)
+
+== tariff_rates  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - tariff_id: BIGINT  [NOT NULL]
+   - lane_id: BIGINT
+   - equipment: VARCHAR(12)
+   - service: VARCHAR(8)
+   - min_weight_kg: NUMERIC(12, 3)  [NOT NULL, default=0]
+   - max_weight_kg: NUMERIC(12, 3)
+   - basis: VARCHAR(12)  [NOT NULL, default='per_shipment'::rate_basis]
+   - rate: NUMERIC(14, 2)  [NOT NULL]
+   - min_charge: NUMERIC(14, 2)
+   FK (lane_id) -> lanes(id)
+   FK (tariff_id) -> tariffs(id)
+
+== tariffs  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - customer_id: BIGINT
+   - carrier_id: BIGINT
+   - currency: CHAR(3)  [NOT NULL, default='KRW'::bpchar]
+   - valid_from: DATE  [NOT NULL]
+   - valid_to: DATE
+   - created_by: BIGINT
+   - updated_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (carrier_id) -> carriers(partner_id)
+   FK (created_by) -> users(id)
+   FK (currency) -> currencies(code)
+   FK (customer_id) -> customers(partner_id)
+   FK (tenant_id) -> tenants(id)
+   FK (updated_by) -> users(id)
+
+== tax_codes  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".tax_codes_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - code: TEXT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - tax_type: TEXT  [NOT NULL]
+   - rate: NUMERIC(7, 4)  [NOT NULL, default=0]
+   - country: CHAR(2)
+   - region: TEXT
+   - is_compound: BOOLEAN  [NOT NULL, default=false]
+   - is_active: BOOLEAN  [NOT NULL, default=true]
+   - effective_from: DATE  [NOT NULL, default=CURRENT_DATE]
+   - effective_to: DATE
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   UNIQUE (tenant_id, code)
+
+== tenants  (rows=1)
+   - id: BIGINT  [PK, NOT NULL]
+   - public_id: UUID  [NOT NULL, default=gen_random_uuid()]
+   - code: TEXT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - base_currency: CHAR(3)  [NOT NULL, default='KRW'::bpchar]
+   - timezone: TEXT  [NOT NULL, default='Asia/Seoul'::text]
+   - settings: JSONB  [NOT NULL, default='{}'::jsonb]
+   - is_active: BOOLEAN  [NOT NULL, default=true]
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   UNIQUE (public_id)
+
+== tenders  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - shipment_id: BIGINT  [NOT NULL]
+   - carrier_id: BIGINT  [NOT NULL]
+   - round_seq: INTEGER  [NOT NULL, default=1]
+   - status: VARCHAR(9)  [NOT NULL, default='offered'::tender_status]
+   - offered_rate: NUMERIC(14, 2)
+   - currency: CHAR(3)  [NOT NULL, default='KRW'::bpchar]
+   - expires_at: TIMESTAMP
+   - offered_at: TIMESTAMP  [NOT NULL, default=now()]
+   - responded_at: TIMESTAMP
+   - response_note: TEXT
+   - created_by: BIGINT
+   FK (carrier_id) -> carriers(partner_id)
+   FK (created_by) -> users(id)
+   FK (currency) -> currencies(code)
+   FK (shipment_id) -> shipments(id)
+
+== tracking_events  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".tracking_events_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - shipment_id: BIGINT  [NOT NULL]
+   - event_type: VARCHAR(16)  [NOT NULL]
+   - latitude: NUMERIC(9, 6)
+   - longitude: NUMERIC(9, 6)
+   - speed_kmh: NUMERIC(6, 2)
+   - note: TEXT
+   - source: TEXT
+   - raw_payload: JSONB
+   - occurred_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+
+== tracking_events_2026_06  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".tracking_events_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - shipment_id: BIGINT  [NOT NULL]
+   - event_type: VARCHAR(16)  [NOT NULL]
+   - latitude: NUMERIC(9, 6)
+   - longitude: NUMERIC(9, 6)
+   - speed_kmh: NUMERIC(6, 2)
+   - note: TEXT
+   - source: TEXT
+   - raw_payload: JSONB
+   - occurred_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+
+== tracking_events_2026_07  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".tracking_events_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - shipment_id: BIGINT  [NOT NULL]
+   - event_type: VARCHAR(16)  [NOT NULL]
+   - latitude: NUMERIC(9, 6)
+   - longitude: NUMERIC(9, 6)
+   - speed_kmh: NUMERIC(6, 2)
+   - note: TEXT
+   - source: TEXT
+   - raw_payload: JSONB
+   - occurred_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+
+== tracking_events_2026_08  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".tracking_events_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - shipment_id: BIGINT  [NOT NULL]
+   - event_type: VARCHAR(16)  [NOT NULL]
+   - latitude: NUMERIC(9, 6)
+   - longitude: NUMERIC(9, 6)
+   - speed_kmh: NUMERIC(6, 2)
+   - note: TEXT
+   - source: TEXT
+   - raw_payload: JSONB
+   - occurred_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+
+== tracking_events_default  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".tracking_events_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - shipment_id: BIGINT  [NOT NULL]
+   - event_type: VARCHAR(16)  [NOT NULL]
+   - latitude: NUMERIC(9, 6)
+   - longitude: NUMERIC(9, 6)
+   - speed_kmh: NUMERIC(6, 2)
+   - note: TEXT
+   - source: TEXT
+   - raw_payload: JSONB
+   - occurred_at: TIMESTAMP  [PK, NOT NULL, default=now()]
+
+== user_roles  (rows=1)
+   - user_id: BIGINT  [PK, NOT NULL]
+   - role_id: BIGINT  [PK, NOT NULL]
+   - granted_by: BIGINT
+   - granted_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (granted_by) -> users(id)
+   FK (role_id) -> roles(id)
+   FK (user_id) -> users(id)
+
+== user_sessions  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".user_sessions_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - user_id: BIGINT  [NOT NULL]
+   - session_token_hash: TEXT  [NOT NULL]
+   - ip_address: INET
+   - user_agent: TEXT
+   - expires_at: TIMESTAMP  [NOT NULL]
+   - revoked_at: TIMESTAMP
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   UNIQUE (session_token_hash)
+
+== users  (rows=2)
+   - id: BIGINT  [PK, NOT NULL]
+   - public_id: UUID  [NOT NULL, default=gen_random_uuid()]
+   - tenant_id: BIGINT  [NOT NULL]
+   - department_id: BIGINT
+   - employee_no: TEXT
+   - email: TEXT  [NOT NULL]
+   - full_name: TEXT  [NOT NULL]
+   - phone: TEXT
+   - job_title: TEXT
+   - password_hash: TEXT
+   - password_changed_at: TIMESTAMP
+   - mfa_enabled: BOOLEAN  [NOT NULL, default=false]
+   - failed_login_count: INTEGER  [NOT NULL, default=0]
+   - locked_until: TIMESTAMP
+   - locale: TEXT  [NOT NULL, default='ko-KR'::text]
+   - timezone: TEXT  [NOT NULL, default='Asia/Seoul'::text]
+   - is_active: BOOLEAN  [NOT NULL, default=true]
+   - last_login_at: TIMESTAMP
+   - deleted_at: TIMESTAMP
+   - created_by: BIGINT
+   - updated_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   - external_auth_id: TEXT
+   FK (created_by) -> users(id)
+   FK (department_id) -> departments(id)
+   FK (tenant_id) -> tenants(id)
+   FK (updated_by) -> users(id)
+   UNIQUE (public_id)
+
+== vehicle_inspections  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".vehicle_inspections_id_seq'::regclass)]
+   - vehicle_id: BIGINT  [NOT NULL]
+   - inspection_type: TEXT  [NOT NULL]
+   - inspected_at: TIMESTAMP  [NOT NULL]
+   - inspector: TEXT
+   - passed: BOOLEAN  [NOT NULL]
+   - defects: JSONB  [NOT NULL, default='[]'::jsonb]
+   - next_inspection_due: DATE
+   - document_url: TEXT
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+
+== vehicle_maintenance_logs  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".vehicle_maintenance_logs_id_seq'::regclass)]
+   - vehicle_id: BIGINT  [NOT NULL]
+   - schedule_id: BIGINT
+   - maintenance_type: TEXT  [NOT NULL]
+   - performed_at: DATE  [NOT NULL]
+   - odometer_km: INTEGER
+   - shop_name: TEXT
+   - technician: TEXT
+   - cost: NUMERIC(12, 2)
+   - currency: CHAR(3)
+   - parts_replaced: ARRAY
+   - notes: TEXT
+   - next_due_at: DATE
+   - next_due_km: INTEGER
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (schedule_id) -> vehicle_maintenance_schedules(id)
+
+== vehicle_maintenance_schedules  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".vehicle_maintenance_schedules_id_seq'::regclass)]
+   - vehicle_id: BIGINT  [NOT NULL]
+   - maintenance_type: TEXT  [NOT NULL]
+   - interval_km: INTEGER
+   - interval_days: INTEGER
+   - last_done_at: DATE
+   - last_odometer_km: INTEGER
+   - next_due_at: DATE
+   - next_due_km: INTEGER
+   - notes: TEXT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+
+== vehicles  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - carrier_id: BIGINT  [NOT NULL]
+   - plate_no: TEXT  [NOT NULL]
+   - vin: TEXT
+   - equipment: VARCHAR(12)  [NOT NULL, default='van'::equipment_type]
+   - model: TEXT
+   - model_year: SMALLINT
+   - capacity_kg: NUMERIC(12, 3)
+   - capacity_cbm: NUMERIC(12, 3)
+   - telematics_device_id: TEXT
+   - status: VARCHAR(11)  [NOT NULL, default='available'::vehicle_status]
+   - deleted_at: TIMESTAMP
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   - updated_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (carrier_id) -> carriers(partner_id)
+
+== webhook_configs  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".webhook_configs_id_seq'::regclass)]
+   - tenant_id: BIGINT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - url: TEXT  [NOT NULL]
+   - secret_hash: TEXT
+   - event_types: ARRAY  [NOT NULL, default='{}'::text[]]
+   - headers: JSONB  [NOT NULL, default='{}'::jsonb]
+   - timeout_seconds: INTEGER  [NOT NULL, default=10]
+   - retry_max: INTEGER  [NOT NULL, default=3]
+   - is_active: BOOLEAN  [NOT NULL, default=true]
+   - failure_count: INTEGER  [NOT NULL, default=0]
+   - last_triggered_at: TIMESTAMP
+   - created_by: BIGINT
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+
+== webhook_deliveries  (rows=0)
+   - id: BIGINT  [PK, NOT NULL, default=nextval('"vtms".webhook_deliveries_id_seq'::regclass)]
+   - webhook_config_id: BIGINT  [NOT NULL]
+   - event_type: TEXT  [NOT NULL]
+   - payload: JSONB  [NOT NULL]
+   - response_status: INTEGER
+   - response_body: TEXT
+   - attempt_count: INTEGER  [NOT NULL, default=1]
+   - next_retry_at: TIMESTAMP
+   - status: TEXT  [NOT NULL, default='PENDING'::text]
+   - created_at: TIMESTAMP  [NOT NULL, default=now()]
+   FK (webhook_config_id) -> webhook_configs(id)
+
+== zone_postal_codes  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - zone_id: BIGINT  [NOT NULL]
+   - country: CHAR(2)  [NOT NULL, default='KR'::bpchar]
+   - postal_prefix: TEXT  [NOT NULL]
+   FK (zone_id) -> zones(id)
+   UNIQUE (zone_id, country, postal_prefix)
+
+== zones  (rows=0)
+   - id: BIGINT  [PK, NOT NULL]
+   - tenant_id: BIGINT  [NOT NULL]
+   - code: TEXT  [NOT NULL]
+   - name: TEXT  [NOT NULL]
+   - deleted_at: TIMESTAMP
+   FK (tenant_id) -> tenants(id)
+

@@ -1,0 +1,14 @@
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+sqlalchemy==2.0.30
+psycopg2-binary==2.9.9
+pydantic-settings==2.3.4
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.9
+email-validator==2.2.0
+google-auth==2.30.0
+requests==2.32.3
+# 서버 OpenSSL 1.0.2k 호환을 위해 urllib3 는 1.x 고정 (v2 는 OpenSSL 1.1.1+ 필요)
+urllib3==1.26.20
+gunicorn==22.0.0

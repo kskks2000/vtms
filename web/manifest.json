@@ -1,0 +1,23 @@
+{
+    "name": "VTMS 운송 관리 시스템",
+    "short_name": "VTMS",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#FFFFFF",
+    "theme_color": "#1A5FB4",
+    "description": "대기업용 TMS 운송 관리 시스템",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

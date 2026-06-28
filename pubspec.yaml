@@ -1,0 +1,32 @@
+name: vtms
+description: "대기업용 TMS 운송 관리 시스템 (웹 + 안드로이드)"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+  flutter: '>=3.27.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  # 라우팅 (웹 URL 지원 + 반응형 셸)
+  go_router: ^14.2.0
+  # 백엔드 HTTP 통신
+  http: ^1.2.1
+  # 토큰 보관 (웹 + 안드로이드 지원)
+  flutter_secure_storage: ^9.2.2
+  # Firebase Authentication (이메일/비밀번호 + Google, 웹 + 안드로이드)
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  # 안드로이드에서 Firebase Google 로그인 자격증명 발급에 사용
+  google_sign_in: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
