@@ -20,8 +20,8 @@ $SSH "$HOST" "python3 -c \"import tarfile; tarfile.open('/web/vtms-backend.tgz')
 echo "==> [3/5] 백엔드 재기동 (gunicorn 8080)"
 $SSH "$HOST" "cd /web/vtms/backend && python3 scripts/restart_gabia.py"
 
-echo "==> [4/5] 웹 빌드 (flutter)"
-flutter build web --release --dart-define=API_BASE_URL=
+echo "==> [4/5] 웹 빌드 (flutter, .env 의 Firebase/Google 키 주입)"
+bash scripts/build_web.sh
 
 echo "==> [5/5] 웹 업로드"
 tar czf /tmp/vtms-web.tgz -C build/web .

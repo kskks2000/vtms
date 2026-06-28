@@ -1,11 +1,12 @@
 // Firebase 플랫폼별 설정.
 //
-// 웹 설정은 Firebase 콘솔에서 제공한 값으로 채워져 있습니다.
-// 안드로이드/iOS 는 `flutterfire configure` 를 실행해 자동 생성하거나,
-// Firebase 콘솔에서 해당 앱을 추가한 뒤 아래 android 값을 채워주세요.
+// 보안: 키 값은 더 이상 소스에 하드코딩하지 않고, 빌드 시 --dart-define 으로
+// 주입한다(루트 .env 참조). 값이 비어 있으면 빌드 스크립트가 .env 를 읽어
+// 주입하지 않은 것이므로, scripts/build_web.sh 또는 redeploy.sh 로 빌드한다.
 //
-// 참고: 여기 담긴 apiKey 는 Firebase 웹 클라이언트 키로, 비밀값이 아닙니다.
-// 접근 제어는 Firebase 보안 규칙과 Authorized domains 로 수행합니다.
+// 참고: Firebase 웹 apiKey 자체는 "비밀값"이 아니라 클라이언트 식별자이며,
+// 접근 제어는 Firebase 보안 규칙과 Authorized domains 로 수행한다. 다만 키를
+// 저장소(GitHub)에 커밋하지 않기 위해 .env 로 분리한다.
 
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
@@ -13,6 +14,24 @@ import 'package:flutter/foundation.dart'
 
 class DefaultFirebaseOptions {
   DefaultFirebaseOptions._();
+
+  // ── 빌드 시 주입되는 환경값 (--dart-define) ──────────────────
+  static const String _webApiKey =
+      String.fromEnvironment('FIREBASE_WEB_API_KEY');
+  static const String _webAppId =
+      String.fromEnvironment('FIREBASE_WEB_APP_ID');
+  static const String _androidApiKey =
+      String.fromEnvironment('FIREBASE_ANDROID_API_KEY');
+  static const String _androidAppId =
+      String.fromEnvironment('FIREBASE_ANDROID_APP_ID');
+  static const String _messagingSenderId =
+      String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID');
+  static const String _projectId =
+      String.fromEnvironment('FIREBASE_PROJECT_ID');
+  static const String _authDomain =
+      String.fromEnvironment('FIREBASE_AUTH_DOMAIN');
+  static const String _storageBucket =
+      String.fromEnvironment('FIREBASE_STORAGE_BUCKET');
 
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
@@ -30,22 +49,20 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: '***REMOVED_FIREBASE_KEY***',
-    appId: '1:851399161896:web:d203f8ac9e6082b8f35d1d',
-    messagingSenderId: '851399161896',
-    projectId: 'vtms-e44bf',
-    authDomain: 'vtms-e44bf.firebaseapp.com',
-    storageBucket: 'vtms-e44bf.firebasestorage.app',
+    apiKey: _webApiKey,
+    appId: _webAppId,
+    messagingSenderId: _messagingSenderId,
+    projectId: _projectId,
+    authDomain: _authDomain,
+    storageBucket: _storageBucket,
   );
 
-  // TODO(android): Firebase 콘솔에서 안드로이드 앱을 추가한 뒤
-  // appId/apiKey 를 채우고 google-services.json 을 android/app/ 에 배치하세요.
-  // 또는 `flutterfire configure` 로 이 파일을 재생성하세요.
+  // 안드로이드: Firebase 콘솔에서 앱 추가 후 .env 의 FIREBASE_ANDROID_* 를 채운다.
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'TODO_ANDROID_API_KEY',
-    appId: 'TODO_ANDROID_APP_ID',
-    messagingSenderId: '851399161896',
-    projectId: 'vtms-e44bf',
-    storageBucket: 'vtms-e44bf.firebasestorage.app',
+    apiKey: _androidApiKey,
+    appId: _androidAppId,
+    messagingSenderId: _messagingSenderId,
+    projectId: _projectId,
+    storageBucket: _storageBucket,
   );
 }
