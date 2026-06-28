@@ -159,6 +159,38 @@ class OrderLookups {
   }
 }
 
+/// 대시보드 요약(상태별 건수 + 오늘 + 당월 매출).
+class OrderSummary {
+  OrderSummary({
+    required this.total,
+    required this.statusCounts,
+    required this.today,
+    required this.monthRevenue,
+  });
+
+  final int total;
+  final Map<String, int> statusCounts;
+  final int today;
+  final num monthRevenue;
+
+  int count(String status) => statusCounts[status] ?? 0;
+
+  /// 여러 상태의 합계.
+  int sumOf(Iterable<String> statuses) =>
+      statuses.fold<int>(0, (s, k) => s + count(k));
+
+  factory OrderSummary.fromJson(Map<String, dynamic> j) => OrderSummary(
+        total: j['total'] as int? ?? 0,
+        statusCounts: ((j['status_counts'] as Map?) ?? {})
+            .map((k, v) => MapEntry(k.toString(), (v as num?)?.toInt() ?? 0)),
+        today: j['today'] as int? ?? 0,
+        monthRevenue: j['month_revenue'] as num? ?? 0,
+      );
+
+  static OrderSummary empty() =>
+      OrderSummary(total: 0, statusCounts: const {}, today: 0, monthRevenue: 0);
+}
+
 /// 목록 행(요약).
 class OrderListItem {
   OrderListItem({

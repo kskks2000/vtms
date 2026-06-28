@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/auth/auth_models.dart';
 import 'order_api.dart';
 import 'order_bulk_view.dart';
+import 'order_dashboard.dart';
 import 'order_form_view.dart';
 import 'order_models.dart';
 
@@ -27,6 +28,9 @@ class _OrderScreenState extends State<OrderScreen> {
   String? _lookupError;
   OrderLookups? _lookups;
 
+  bool _loadingSummary = false;
+  OrderSummary? _summary;
+
   bool _loadingList = false;
   OrderPage? _page;
   int _offset = 0;
@@ -38,6 +42,23 @@ class _OrderScreenState extends State<OrderScreen> {
   void initState() {
     super.initState();
     _ensureLookups();
+    _loadSummary();
+  }
+
+  /// 대시보드 요약 로드. 실패해도 화면은 정상 동작하도록 조용히 무시한다.
+  Future<void> _loadSummary() async {
+    setState(() => _loadingSummary = true);
+    try {
+      final s = await _api.summary();
+      if (!mounted) return;
+      setState(() {
+        _summary = s;
+        _loadingSummary = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingSummary = false);
+    }
   }
 
   @override
@@ -127,9 +148,25 @@ class _OrderScreenState extends State<OrderScreen> {
     }
   }
 
+  Future<void> _openListWithStatus(String status) async {
+    if (!await _ensureLookups()) return;
+    setState(() {
+      _view = _View.list;
+      _statusFilter = status;
+      _offset = 0;
+    });
+    _loadList();
+  }
+
   Future<void> _openBulk() async {
     if (!await _ensureLookups()) return;
     setState(() => _view = _View.bulk);
+  }
+
+  /// 메뉴(대시보드)로 복귀. 그동안의 변경이 반영되도록 요약을 새로고침한다.
+  void _goLanding() {
+    setState(() => _view = _View.landing);
+    _loadSummary();
   }
 
   Future<String?> _submitForm(OrderDetail data) async {
@@ -205,7 +242,19 @@ class _OrderScreenState extends State<OrderScreen> {
     }
     switch (_view) {
       case _View.landing:
-        return _landing();
+        return OrderDashboard(
+          summary: _summary,
+          loadingSummary: _loadingSummary,
+          lookupError: _lookupError,
+          onRetry: () {
+            _ensureLookups();
+            _loadSummary();
+          },
+          onNewOrder: _openNewForm,
+          onOpenList: _openList,
+          onOpenBulk: _openBulk,
+          onOpenStatus: _openListWithStatus,
+        );
       case _View.list:
         return _listView();
       case _View.form:
@@ -225,67 +274,6 @@ class _OrderScreenState extends State<OrderScreen> {
     }
   }
 
-  // ── 랜딩 (기능 카드) ───────────────────────────────────────
-  Widget _landing() {
-    final theme = Theme.of(context);
-    final cards = [
-      _LandingCard(
-        icon: Icons.add_box_outlined,
-        title: '오더 등록',
-        subtitle: '운송 주문을 신규 등록합니다',
-        onTap: _openNewForm,
-      ),
-      _LandingCard(
-        icon: Icons.list_alt_outlined,
-        title: '오더 목록 / 검색',
-        subtitle: '등록된 오더를 조회·수정합니다',
-        onTap: _openList,
-      ),
-      _LandingCard(
-        icon: Icons.upload_file_outlined,
-        title: '오더 일괄 업로드',
-        subtitle: 'CSV 로 여러 오더를 한 번에 등록',
-        onTap: _openBulk,
-      ),
-      _LandingCard(
-        icon: Icons.timeline_outlined,
-        title: '오더 상태 관리',
-        subtitle: '상태별 조회 및 전이 처리',
-        onTap: () async {
-          await _openList();
-        },
-      ),
-    ];
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        Text('오더 생성',
-            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 6),
-        Text('운송 오더를 등록하고 관리합니다.',
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-        if (_lookupError != null) ...[
-          const SizedBox(height: 16),
-          _InlineError(message: _lookupError!, onRetry: () => _ensureLookups()),
-        ],
-        const SizedBox(height: 24),
-        LayoutBuilder(builder: (context, c) {
-          final cols = c.maxWidth >= 1100 ? 3 : (c.maxWidth >= 720 ? 2 : 1);
-          return GridView.count(
-            crossAxisCount: cols,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 14,
-            crossAxisSpacing: 14,
-            childAspectRatio: 2.6,
-            children: cards,
-          );
-        }),
-      ],
-    );
-  }
-
   // ── 목록 / 검색 / 상태관리 ─────────────────────────────────
   Widget _listView() {
     final scheme = Theme.of(context).colorScheme;
@@ -300,7 +288,7 @@ class _OrderScreenState extends State<OrderScreen> {
           child: Row(
             children: [
               IconButton(
-                onPressed: () => setState(() => _view = _View.landing),
+                onPressed: _goLanding,
                 icon: const Icon(Icons.arrow_back),
                 tooltip: '메뉴로',
               ),
@@ -616,95 +604,3 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-class _LandingCard extends StatelessWidget {
-  const _LandingCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: scheme.outlineVariant),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: scheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: scheme.onPrimaryContainer),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(title,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 2),
-                    Text(subtitle,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurfaceVariant)),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right, color: scheme.outline),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _InlineError extends StatelessWidget {
-  const _InlineError({required this.message, required this.onRetry});
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: scheme.errorContainer,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline, color: scheme.onErrorContainer, size: 20),
-          const SizedBox(width: 8),
-          Expanded(
-              child: Text(message,
-                  style: TextStyle(color: scheme.onErrorContainer))),
-          TextButton(onPressed: onRetry, child: const Text('다시 시도')),
-        ],
-      ),
-    );
-  }
-}

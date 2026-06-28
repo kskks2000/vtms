@@ -37,6 +37,19 @@ class OrderApi {
     throw AuthException(_msg(res, '기준 정보를 불러오지 못했습니다.'));
   }
 
+  Future<OrderSummary> summary() async {
+    final res = await _client.get(
+      Uri.parse(AppConfig.api('/orders/_summary')),
+      headers: await _headers(),
+    );
+    if (res.statusCode == 200) {
+      return OrderSummary.fromJson(
+        jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>,
+      );
+    }
+    throw AuthException(_msg(res, '요약 정보를 불러오지 못했습니다.'));
+  }
+
   Future<OrderPage> list({
     String? q,
     String? status,

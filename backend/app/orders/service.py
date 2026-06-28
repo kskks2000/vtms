@@ -253,6 +253,48 @@ def list_orders(
     }
 
 
+# ── 대시보드 요약 ───────────────────────────────────────────────
+def summary(db: Session, *, tenant_id: int) -> dict:
+    """오더 대시보드용 집계. 상태별 건수 + 오늘 등록 + 당월 매출을 한 번에 반환.
+
+    상태별 건수는 단일 GROUP BY 한 번으로 구해 N번 호출을 피한다.
+    PostgreSQL 11 호환 문법만 사용한다.
+    """
+    rows = db.execute(
+        text(
+            f"SELECT o.status AS status, COUNT(*) AS cnt "
+            f"FROM {_tbl('orders')} o WHERE o.tenant_id = :t GROUP BY o.status"
+        ),
+        {"t": tenant_id},
+    ).mappings().all()
+    status_counts = {r["status"]: int(r["cnt"]) for r in rows}
+    total = sum(status_counts.values())
+
+    today = db.execute(
+        text(
+            f"SELECT COUNT(*) FROM {_tbl('orders')} "
+            "WHERE tenant_id = :t AND created_at::date = CURRENT_DATE"
+        ),
+        {"t": tenant_id},
+    ).scalar() or 0
+
+    month_revenue = db.execute(
+        text(
+            f"SELECT COALESCE(SUM(sell_amount), 0) FROM {_tbl('orders')} "
+            "WHERE tenant_id = :t AND status <> 'cancelled' "
+            "AND created_at >= date_trunc('month', CURRENT_DATE)"
+        ),
+        {"t": tenant_id},
+    ).scalar() or 0
+
+    return {
+        "total": total,
+        "status_counts": status_counts,
+        "today": int(today),
+        "month_revenue": float(month_revenue),
+    }
+
+
 # ── 단건(자식 포함) ─────────────────────────────────────────────
 def get_order(db: Session, *, tenant_id: int, order_id: int) -> dict:
     head = db.execute(

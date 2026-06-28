@@ -2,6 +2,7 @@
 
 엔드포인트(모두 인증 필요):
   GET    /orders/_lookups        드롭다운/enum 메타 (화면 구성용)
+  GET    /orders/_summary        대시보드 요약 (상태별 건수 · 오늘 · 당월 매출)
   GET    /orders                 목록 (q, status, customer_id, limit, offset)
   GET    /orders/{id}            단건 (품목/배송지/부가요금/참조 포함)
   POST   /orders                 등록 (복합 애그리거트)
@@ -31,6 +32,14 @@ def order_lookups(
     user: User = Depends(get_current_user),
 ):
     return service.lookups(db, tenant_id=user.tenant_id)
+
+
+@router.get("/_summary")
+def order_summary(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return service.summary(db, tenant_id=user.tenant_id)
 
 
 @router.get("")
