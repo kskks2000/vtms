@@ -514,6 +514,26 @@ class _MasterScreenState extends State<MasterScreen> {
         return Icons.account_balance_outlined;
       case 'accessorial_types':
         return Icons.add_card_outlined;
+      case 'departments':
+        return Icons.apartment_outlined;
+      case 'currencies':
+        return Icons.attach_money_outlined;
+      case 'lanes':
+        return Icons.route_outlined;
+      case 'partner_contacts':
+        return Icons.contacts_outlined;
+      case 'carrier_capabilities':
+        return Icons.precision_manufacturing_outlined;
+      case 'carrier_certifications':
+        return Icons.verified_outlined;
+      case 'exchange_rates':
+        return Icons.currency_exchange_outlined;
+      case 'fuel_surcharge_brackets':
+        return Icons.local_gas_station_outlined;
+      case 'kpi_definitions':
+        return Icons.trending_up_outlined;
+      case 'number_sequences':
+        return Icons.format_list_numbered_outlined;
       default:
         return Icons.dataset_outlined;
     }

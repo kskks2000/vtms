@@ -9,6 +9,7 @@ from app.api import auth
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.masters.router import router as master_router
+from app.orders.router import router as order_router
 from app.seed import seed_admin
 
 
@@ -36,6 +37,7 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix=settings.API_PREFIX)
 app.include_router(master_router, prefix=settings.API_PREFIX)
+app.include_router(order_router, prefix=settings.API_PREFIX)
 
 
 @app.get("/health", tags=["system"])
